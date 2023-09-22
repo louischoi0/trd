@@ -4,6 +4,7 @@ from cr import get_connection
 from sys import exit
 from btcmd import model_2
 from itertools import product
+import json
 
 def model_2(state, ts, losscut, w, o, p2th, p1th, atr2th, v2th, k, atrt, sp, **args):
     
@@ -135,6 +136,21 @@ def get_param_set(defaults, d):
 
     return sets
 
+def get_paramsets(redis, stratname):
+
+    while True:
+        print('get')
+        v = redis.lpop(stratname)
+
+        if v:
+            v = v.decode('utf8')
+            v = json.loads(v)
+        yield v
+
+def get_redis():
+    import redis
+    return redis.Redis(host='localhost', port=6379, db=0)
+
 if __name__ == "__main__":
     con = get_connection()
     ts = np.load('data/btc.npy')
@@ -161,9 +177,15 @@ if __name__ == "__main__":
         'h': 60 * 9
     }
 
-    sets = get_param_set(mdargs, _diff)
+    #sets = get_param_set(mdargs, _diff)
+    import redis
+    redis = get_redis()
 
-    for _ms in sets:
+    for _ms in get_paramsets(redis, 'mmv1'):
+        print('ms:', _ms)
+        if _ms is None: break
+        del _ms["_hash"]
+        
         state, sb = strts(ts, _ms)
         d = { **state, **sb, **_ms }
 
@@ -175,14 +197,6 @@ if __name__ == "__main__":
 
         df = pd.DataFrame([d])
         df['createdAt'] = pd.Timestamp.now()
-        df.to_sql('btc_mst_md2_seq', if_exists='append', con=con, index=False)
+        df.to_sql('btc_mmv1_seq', if_exists='append', con=con, index=False)
         print(df)
-
-        
-
-    
-
-
-
-
 

@@ -1,5 +1,13 @@
 import collections
 from itertools import product
+from cr import get_connection
+import json
+import redis
+import hashlib
+
+def get_redis():
+    return redis.Redis(host='localhost', port=6379, db=0)
+
 
 def get_param_set(defaults, d):
     arr = []
@@ -16,25 +24,32 @@ def get_param_set(defaults, d):
         for k,v in s:
             _d[k] = v
 
-        sets.append(_d)
+        _d['_hash'] = hashparams(_d)
+        yield _d
+        #sets.append(_d)
 
-    return sets
+    #return sets
 
 def hashparams(p):
     od = collections.OrderedDict(sorted(p.items()))
-    print(od)
+
     s = ""
     for k in od:
         s += k
-        s += str(od[k])
-    
-    return hash(s)
+        s += str(od[k]) + ":"
+
+    s = s.encode('utf8') 
+    return hashlib.md5(s).hexdigest()
 
 if __name__ == "__main__":
+    stratname = 'mmv1'
     _diff = {
         "atrt": (1.05, 0.025, 5),
-        "p2th": (1.03, 0.0015, 20),
-        "p1th": (1.005, 0.00025, 10),
+        "p2th": (1.02, 0.0015, 30),
+        "p1th": (1.003, 0.00025, 30),
+        "h": (7, 1, 6),
+        "o": (3, 1, 5),
+        "w": (7, 1, 6),
     }
 
     mdargs = {
@@ -53,9 +68,12 @@ if __name__ == "__main__":
     }
 
     sets = get_param_set(mdargs, _diff)
+    r = get_redis()
+    i = 0
 
-    h1 = hashparams(sets[0])
-    h2 = hashparams(sets[0])
-    
-    print(h1)
-    print(h2)
+    for ss in sets:
+        i += 1
+        ss = json.dumps(ss)
+        r.lpush(stratname, ss)
+        print(ss)
+        if i > 100: break
