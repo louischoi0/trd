@@ -42,9 +42,8 @@ def hashparams(p):
     return hashlib.md5(s).hexdigest()
 
 if __name__ == "__main__":
-    stratname = 'mmv1'
+    stratname = 'mmv2'
     _diff = {
-        "atrt": (1.05, 0.025, 5),
         "p2th": (1.02, 0.0015, 30),
         "p1th": (1.003, 0.00025, 30),
         "h": (7, 1, 6),
