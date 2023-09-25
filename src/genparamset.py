@@ -42,13 +42,21 @@ def hashparams(p):
     return hashlib.md5(s).hexdigest()
 
 if __name__ == "__main__":
-    stratname = 'mmv2'
+    stratname = 'mmv3'
     _diff = {
         "p2th": (1.02, 0.0015, 30),
         "p1th": (1.003, 0.00025, 30),
         "h": (7, 1, 6),
         "o": (3, 1, 5),
         "w": (7, 1, 6),
+    }
+
+    _diff = {
+        "p2th": (1.023, 0.0015, 20),
+        "p1th": (1.0045, 0.00025, 20),
+        "w": (60*27, 60, 10),
+        "o": (60*11, 60, 5),
+        "h": (60*31, 50, 10),
     }
 
     mdargs = {
@@ -74,5 +82,4 @@ if __name__ == "__main__":
         i += 1
         ss = json.dumps(ss)
         r.lpush(stratname, ss)
-        print(ss)
-        if i > 100: break
+        print(f'push:  {ss}')

@@ -4,11 +4,11 @@ from sys import exit
 import numpy as np
 
 def get_data(con, sym):
-    start = "2021-02-01"
+    start = "2022-01-01"
     end = "2023-09-10"
 
     q = f'''
-    select * from ts_{sym.lower()}_m1 
+    select * from ts_{sym.lower()}_m1_v2
     where "candleDateTime" >= '{start}' and "candleDateTime" < '{end}'
     order by  "candleDateTime" 
     '''
@@ -38,6 +38,9 @@ if __name__ == "__main__":
     con = get_connection()
 
     df = get_data(con, 'BTC')
+    df.index = pd.to_datetime(df["candleDateTime"])
+    df = df.resample('1min').first()
+    df.to_csv("btc_prep")
 
     df['change'] = df["tradePrice"].pct_change()
     df["change"] += 1
