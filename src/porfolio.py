@@ -52,7 +52,8 @@ def get_buy_signal(p, prices, ma, w, o, p1th, p2th):
     p2 = prices[-w-o: ]
 
     print(f'get buy signal - cp:{p} ')
-    if p > ma and p1 > p1th and p2 > p2th:
+    #if p > ma and p1 > p1th and p2 > p2th:
+    if p1 > p1th and p2 > p2th:
         return p
     else:
         return None
