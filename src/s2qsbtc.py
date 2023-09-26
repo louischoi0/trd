@@ -69,6 +69,66 @@ def gbrt(seed, irt, positions, state, sb):
     
     return iseed
 
+def smodel_2(state, ts, nidx, positions, mdargs, sb):
+    npositions = []
+
+    def sell(s, profit):
+        state['seed'] += s * profit
+        sb['case'] += 1
+        if profit > 1:
+            sb["pts"].append(0.6)
+        else :
+            sb["pts"].append(0.4)
+    # maxprofit: 보유후 기록 한 최고 수익률
+    for i, p, s, v, maxprofit in positions:
+    
+        profit = np.prod( ts[i:nidx, 1] )         
+        pr = ( profit - 1 ) * 100 
+
+        if nidx - i >= mdargs['h']: #보유기간 다 채우고 팜
+            sell(s, profit)
+
+            if profit > 1:
+                sb["win"] += 1
+                sb["wrate"] += pr
+                
+                sb["_swin"] += 1
+                sb["sloss"] = max(sb["sloss"], sb["_sloss"])
+                sb["_sloss"] = 0
+
+            else:
+                sb["loss"] += 1
+                sb["lrate"] += pr
+                
+                sb["_sloss"] += 1
+                sb["swin"] = max(sb["swin"], sb["_swin"])
+                sb["_swin"] = 0
+
+        elif profit < mdargs["losscut"]: #로스컷
+            sell(s, profit)
+
+            sb["lrate"] += pr
+            sb["losscut"] += 1
+            sb["loss"] += 1
+            sb["_sloss"] += 1
+            sb["swin"] = max(sb["swin"], sb["_swin"])
+            sb["_swin"] = 0
+        
+        elif False and profit > 1 and profit < maxprofit - 0.032: #보유후 최고 수익률 에서 2.5 내려오면 팜 
+            #print(f'exit position: profit{profit},maxprofit:{maxprofit},thres:{maxprofit-0.025}')
+            sell(s, profit)
+            sb["win"] += 1
+            sb["wrate"] += pr
+            
+            sb["_swin"] += 1
+            sb["sloss"] = max(sb["sloss"], sb["_sloss"])
+            sb["_sloss"] = 0
+
+        else:
+            npositions.append( ( i, p, s, v, max(maxprofit, profit) ) )
+
+    return npositions
+
 def gssgn(state, ts, nidx, positions, mdargs, sb):
     npositions = []
 
@@ -161,13 +221,14 @@ def strts(ts, mdargs):
         chg = ts[i][1]
 
         if state["positions"]: 
-            state['positions'] = gssgn(state, ts, i, state['positions'], mdargs, sb)
+            state['positions'] = smodel_2(state, ts, i, state['positions'], mdargs, sb)
 
         if signal_price and state['seed'] > 10:
             iseed = gbrt(state['seed'], mdargs['irt'], state['positions'], state, sb)
 
             state['seed'] -= iseed
-            state['positions'].append( (i, p, iseed, iseed / p ) )
+            # positions 매수시점인덱스, 매수가격, 투자금액, 총시드, 보유후수익률
+            state['positions'].append( (i, p, iseed, iseed / p , 1) )
             #print(f'got signal!, sp:{signal_price} is:{iseed}')
         
         if signal_price:
@@ -241,6 +302,7 @@ if __name__ == "__main__":
         "o": (60*11, 60, 5),
         "h": (60*31, 50, 10),
     }
+    _diff = {}
 
     mdargs = {
         'sp': 0.977,
@@ -252,13 +314,13 @@ if __name__ == "__main__":
         'atr2th': 0.1,
         'v2th': 0.1,
         'k': 0.5,
-        'w': 60 * 33,
-        'o': 60 * 13,
+        'w': 60 * 27,
+        'o': 60 * 11,
         'h': 60 * 37,
         'maxposition': 3
     }
 
-    #sets = get_param_set(mdargs, _diff)
+    sets = get_param_set(mdargs, _diff)
     redis = get_redis()
     w, o, h = mdargs['w'], mdargs['o'], mdargs['h']
     
@@ -290,8 +352,8 @@ if __name__ == "__main__":
         ( '3/3', ts[2*gen:]),
     ]
 
-    for _ms in get_paramsets(redis, 'mmv3'):
-    #for _ms in sets:
+    #for _ms in get_paramsets(redis, 'mmv3'):
+    for _ms in sets:
         print('ms:', _ms)
         #del _ms["_hash"]
         if _ms is None: break
@@ -311,7 +373,7 @@ if __name__ == "__main__":
             df['dataset'] = tname
             df['createdAt'] = pd.Timestamp.now()
             
-            df.to_sql('btc_mmv1_seq_v3', if_exists='append', con=con, index=False)
+            #df.to_sql('btc_mmv1_seq_v3', if_exists='append', con=con, index=False)
             print(df)
             continue
             #print(df)
