@@ -7,6 +7,10 @@ import json
 import numpy as np
 from sqlalchemy import create_engine
 
+access = "Bkmm9gUIfuji0TwgzAikRul0L1Bx3Lxu6rBf5f3P"          # 본인 값으로 변경
+secret = "WbthIqtWtzxyXIalwxRIdo0SRj74PxqfAJacQF0K"          # 본인 값으로 변경
+upbit = pyupbit.Upbit(access, secret)
+
 def get_connection():
     DB_HOST = "wwhale-on-gpt.cg6x7yqwsa6m.ap-northeast-2.rds.amazonaws.com"
     DB_USER = "postgres"
@@ -23,19 +27,15 @@ def getMinTicker(dt, currency, unit='1',candleunit='minutes', count=400) :
     return endpoint
     return self.request(endpoint)
 
-
-access = "Bkmm9gUIfuji0TwgzAikRul0L1Bx3Lxu6rBf5f3P"          # 본인 값으로 변경
-secret = "WbthIqtWtzxyXIalwxRIdo0SRj74PxqfAJacQF0K"          # 본인 값으로 변경
-upbit = pyupbit.Upbit(access, secret)
-
 def order_buy(symbol, price, money):
+    price -= 3000
     money *= 0.9995
     amount = money / price
     amount = round(amount, 8)
 
     rspn = upbit.buy_limit_order(f"KRW-{symbol}", price, amount)
-
     uuid = rspn["uuid"]
+    
     print(f'order buy - symbol:{symbol} price:{price} amount:{amount} money:{amount*price}')
     return ( pd.Timestamp.now(), uuid, price, amount, amount*price )
 
@@ -47,16 +47,20 @@ def get_market_price():
 
 def get_buy_signal(p, prices, ma, w, o, p1th, p2th):
     #if len(prices) < w + o: return None
-    p1 = prices[-o:]
+    p1a = prices[-o:]
+    p2a = prices[-w-o:]
 
-    p2 = prices[-w-o: ]
+    p1 = (p1a[-1] - p1a[0]) / p1a[0]
+    p2 = (p2a[-1] - p2a[0]) / p2a[0]
+    p1 += 1
+    p2 += 1
+    sig = False
 
-    print(f'get buy signal - cp:{p} ')
-    #if p > ma and p1 > p1th and p2 > p2th:
-    if p1 > p1th and p2 > p2th:
-        return p
-    else:
-        return None
+    if p > ma and p1 > p1th and p2 > p2th:
+        sig = p
+
+    print(f'get buy signal {sig} - cp:{p} p1:{p1} p2:{p2} ma:{ma} ')
+    return sig
 
 def get_sell_signal(currentprice, position, h, losscut=0.975):
     buyts, uuid, buyprice, buyamount, _ = position
@@ -80,7 +84,8 @@ def get_sell_signal(currentprice, position, h, losscut=0.975):
 
 def get_ma(days):
     df = pyupbit.get_ohlcv("KRW-BTC")
-    mdf = df["close"].iloc[-days:]
+    mdf = df["close"].iloc[-days:].mean()
+
     return mdf.mean()
 
 if __name__ == "__main__":
@@ -122,7 +127,7 @@ if __name__ == "__main__":
         prices = np.append( prices, (p, ) )
         w, o, h = 1620, 660, 1900
 
-        buyprice = get_buy_signal(p, prices, ma, w, o, 1.006, 1.015)
+        buyprice = get_buy_signal(p, prices, ma, w, o, 1.006, 1.055)
 
         if buyprice and len(positions) < 4:
             position = order_buy(symbol, p, 10000)
