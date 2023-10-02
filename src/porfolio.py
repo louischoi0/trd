@@ -34,6 +34,7 @@ def order_buy(symbol, price, money):
     amount = round(amount, 8)
 
     rspn = upbit.buy_limit_order(f"KRW-{symbol}", price, amount)
+    print(rspn)
     uuid = rspn["uuid"]
     
     print(f'order buy - symbol:{symbol} price:{price} amount:{amount} money:{amount*price}')
@@ -127,7 +128,7 @@ if __name__ == "__main__":
         prices = np.append( prices, (p, ) )
         w, o, h = 1620, 660, 1900
 
-        buyprice = get_buy_signal(p, prices, ma, w, o, 1.006, 1.055)
+        buyprice = get_buy_signal(p, prices, ma, w, o, 1.008, 1.035)
 
         if buyprice and len(positions) < 4:
             position = order_buy(symbol, p, 10000)
