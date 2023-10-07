@@ -130,7 +130,7 @@ if __name__ == "__main__":
 
         buyprice = get_buy_signal(p, prices, ma, w, o, 1.008, 1.035)
 
-        if buyprice and len(positions) < 4:
+        if buyprice and len(positions) < 10:
             position = order_buy(symbol, p, 10000)
             uuid = position[1]
             positions.append(position)

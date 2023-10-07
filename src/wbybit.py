@@ -4,6 +4,9 @@ import json
 import pandas as pd
 from sqlalchemy import create_engine
 import json
+import sys 
+
+SYM = sys.argv[1]
 
 def get_connection():
     DB_HOST = "wwhale-on-gpt.cg6x7yqwsa6m.ap-northeast-2.rds.amazonaws.com"
@@ -36,14 +39,12 @@ if __name__ == "__main__":
         del msg['data']
         d = { **msg, **_d}
         df = pd.DataFrame([d]) 
-        df.to_sql('bybit_btcusdt_tick', con=con, if_exists='append', index=False)
-        print(df)
+        df.to_sql(f'bybit_{SYM.lower()}usdt_tick', con=con, if_exists='append', index=False)
 
 
     s = ws.ticker_stream(
-            symbol="BTCUSDT",
+            symbol=f"{SYM}USDT",
             callback=callback, )
-    print('hji')
 
     while True:
         sleep(1)
